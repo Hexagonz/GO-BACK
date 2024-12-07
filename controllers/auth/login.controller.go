@@ -63,7 +63,7 @@ func Login(ctx iris.Context) {
 		return
 	}
 
-	var existingUser Users
+	var existingUser models.Users
 	user_check := db.Where("email = ?", user.Email).First(&existingUser)
 	if user_check.Error != nil {
 		ctx.StatusCode(iris.StatusInternalServerError)
@@ -95,7 +95,8 @@ func Login(ctx iris.Context) {
 		return
 	}
 
-	token, err := GenerateJWT(user.Email, user.Password)
+	accses_token, err := GenerateJWT(user.Email,existingUser.Name)
+
 	if err != nil {
 		ctx.StatusCode(iris.StatusInternalServerError)
 		ctx.JSON(iris.Map{
@@ -109,8 +110,8 @@ func Login(ctx iris.Context) {
 	ctx.StatusCode(iris.StatusOK)
 	ctx.JSON(iris.Map{
 		"status":  "success",
-		"data":    existingUser,
-		"token": token,
+		"data": existingUser,
+		"token": accses_token,
 		"message": "User login successfully",
 	})
 }

@@ -1,12 +1,10 @@
 package controllers
 
 import (
-	"fmt"
-	"os"
 	"time"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/kataras/iris/v12/middleware/jwt"
 	"gorm.io/gorm"
 )
 
@@ -16,6 +14,19 @@ var errs error
 
 var user Users
 var register RegisterUser
+
+const (
+	accessTokenMaxAge  = 10 * time.Minute
+	refreshTokenMaxAge = time.Hour
+)
+
+var (
+	privateKey, publicKey = jwt.MustLoadRSA("./private/private.pem", "./private/public.pem")
+
+	signer   = jwt.NewSigner(jwt.RS256, privateKey, accessTokenMaxAge)
+	verifier = jwt.NewVerifier(jwt.RS256, publicKey)
+)
+
 
 type RegisterUser struct {
 	Name                  string `json:"name" validate:"required,min=5,max=30"`
@@ -30,35 +41,22 @@ type Users struct {
 }
 
 type JWTClaim struct {
+	Name  string `json:"id"`
 	Email string `json:"email"`
-	Name  string `json:"name"`
-	jwt.RegisteredClaims
 }
 
-func GenerateJWT(email string, username string) (string, error) {
-	privateKeyBytes, err := os.ReadFile("./private/private.pem")
-	if err != nil {
-		return "", fmt.Errorf("could not read private key: %v", err)
-	}
+func GenerateJWT(email string, name string) (jwt.TokenPair, error) {
 
-	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM(privateKeyBytes)
-	if err != nil {
-		return "", fmt.Errorf("could not parse private key: %v", err)
-	}
+	refreshClaims := jwt.Claims{Subject: name}
 
-	expirationTime := time.Now().Add(1 * time.Hour)
-	claims := &JWTClaim{
+	accessClaims := &JWTClaim{
+		Name: name,
 		Email: email,
-		Name:  username,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(expirationTime),
-		},
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
-	tokenString, err := token.SignedString(privateKey)
+	tokenPair, err := signer.NewTokenPair(accessClaims, refreshClaims, refreshTokenMaxAge)
 	if err != nil {
-		return "", fmt.Errorf("could not sign token: %v", err)
+		return jwt.TokenPair{}, err
 	}
-	return tokenString, err
+	return tokenPair,nil
 }
