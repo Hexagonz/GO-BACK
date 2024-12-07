@@ -7,5 +7,6 @@ import (
 
 func RoutesAuth(app router.Party) {
 	app.Post("/register", controllers.Register)
+	app.Post("/login", controllers.Login)
 }
 

@@ -9,18 +9,14 @@ import (
 	"github.com/kataras/iris/v12"
 )
 
-var validate *validator.Validate
-
 func init() {
 	validate = validator.New()
-	validate.RegisterStructValidation(UserStructLevelValidation, models.Users{})
+	validate.RegisterStructValidation(userRegisterValidation, RegisterUser{})
 }
 
 func Register(ctx iris.Context) {
-	var user models.Users
-	db, errs := database.SetupDatabase()
-
-	err := ctx.ReadJSON(&user)
+	db, errs = database.SetupDatabase()
+	err := ctx.ReadJSON(&register)
 	if err != nil {
 		ctx.StatusCode(iris.StatusBadRequest)
 		ctx.JSON(iris.Map{
@@ -31,7 +27,7 @@ func Register(ctx iris.Context) {
 		return
 	}
 
-	err = validate.Struct(user)
+	err = validate.Struct(register)
 	if err != nil {
 		if _, ok := err.(*validator.InvalidValidationError); ok {
 			ctx.StatusCode(iris.StatusInternalServerError)
@@ -45,6 +41,9 @@ func Register(ctx iris.Context) {
 
 		errors := make(map[string]string)
 		for _, err := range err.(validator.ValidationErrors) {
+			if err.Tag() == "eqfield" && err.Field() == "Password_Confirmation" {
+				errors[err.Field()] = fmt.Sprintf("Field '%s' failed on the '%s' rule password not mismatch password_confrimation", err.Field(), err.Tag())
+			}
 			errors[err.Field()] = fmt.Sprintf("Field '%s' failed on the '%s' rule", err.Field(), err.Tag())
 		}
 
@@ -56,28 +55,29 @@ func Register(ctx iris.Context) {
 		})
 		return
 	}
-	user_check := db.Where("name = ? ", user.Name).First(&user)
+	user_check := db.Where("name = ? ", register.Name).First(&user).Error
 
-	if user_check.RowsAffected > 0 {
+	if user_check == nil {
 		ctx.StatusCode(iris.StatusConflict)
 		ctx.JSON(iris.Map{
 			"status":  "error",
-			"message": "User with this name already exists",
+			"message": "Validate failed",
+			"errors":  map[string]interface{}{"email": "Email already exists"},
 		})
 		return
 	}
 
-	email_check := db.Where("email = ? ", user.Email).First(&user)
-
-	if email_check.RowsAffected > 0 {
+	email_check := db.Where("email = ? ", register.Email).First(&user).Error
+	if email_check == nil {
 		ctx.StatusCode(iris.StatusConflict)
 		ctx.JSON(iris.Map{
 			"status":  "error",
-			"message": "User with this email already exists",
+			"message": "Validate failed",
+			"errors":  map[string]interface{}{"email": "Email already exists"},
 		})
 		return
 	}
-	user_create := models.Users{Name: user.Name, Email: user.Email, Password: user.Password}
+	user_create := models.Users{Name: register.Name, Email: register.Email, Password: register.Password}
 	db.Create(&user_create)
 
 	if errs != nil {
@@ -91,15 +91,18 @@ func Register(ctx iris.Context) {
 	})
 }
 
-func UserStructLevelValidation(sl validator.StructLevel) {
-	user := sl.Current().Interface().(models.Users)
-	if len(user.Name) == 0 {
-		sl.ReportError(user.Name, "Name", "username", "required", "")
+func userRegisterValidation(sl validator.StructLevel) {
+	register := sl.Current().Interface().(RegisterUser)
+	if len(register.Name) == 0 {
+		sl.ReportError(register.Name, "Name", "name", "required", "")
 	}
-	if len(user.Email) == 0 {
-		sl.ReportError(user.Email, "Email", "email", "required", "")
+	if len(register.Email) == 0 {
+		sl.ReportError(register.Email, "Email", "email", "required", "")
 	}
-	if len(user.Password) == 0 {
-		sl.ReportError(user.Password, "Password", "password", "required", "")
+	if len(register.Password) == 0 {
+		sl.ReportError(register.Password, "Password", "password", "required", "")
+	}
+	if len(register.Password_Confirmation) == 0 {
+		sl.ReportError(register.Password_Confirmation, "Password", "password_confirmation", "required", "")
 	}
 }
