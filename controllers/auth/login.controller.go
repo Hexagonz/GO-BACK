@@ -2,7 +2,10 @@ package controllers
 
 import (
 	"fmt"
+	"strconv"
+
 	"github.com/Hexagonz/back-end-go/database"
+	"github.com/Hexagonz/back-end-go/middleware/jwttoken"
 	"github.com/Hexagonz/back-end-go/models"
 	"github.com/go-playground/validator/v10"
 	"github.com/kataras/iris/v12"
@@ -94,9 +97,8 @@ func Login(ctx iris.Context) {
 		})
 		return
 	}
-
-	accses_token, err := GenerateJWT(user.Email,existingUser.Name)
-
+	str := strconv.FormatUint(uint64(existingUser.ID), 10)
+	accses_token, err := jwttoken.GenerateTokenJwt(user.Email,str,ctx)
 	if err != nil {
 		ctx.StatusCode(iris.StatusInternalServerError)
 		ctx.JSON(iris.Map{
@@ -106,12 +108,10 @@ func Login(ctx iris.Context) {
 		})
 		return
 	}
-	
 	ctx.StatusCode(iris.StatusOK)
 	ctx.JSON(iris.Map{
 		"status":  "success",
-		"data": existingUser,
-		"token": accses_token,
+		"data": accses_token,
 		"message": "User login successfully",
 	})
 }
