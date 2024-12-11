@@ -19,14 +19,20 @@ var (
 	secretKey, err = utils.GenerateSecretKey()
 )
 
+type ResponseGenerate struct {
+	AccessToken      string `json:"access_token"`
+	ExpiresAt        int64  `json:"expires_at"`
+	RefreshToken     string `json:"refresh_token"`
+	RefreshExpiresAt int64  `json:"refresh_expires_at"`
+}
+
 func init() {
 	if err != nil {
 		log.Fatal("Failed to generate secret key: " + err.Error())
 	}
 }
 
-
-func GenerateTokenJwt(email string, id string, ctx iris.Context) (map[string]interface{}, error) {
+func GenerateTokenJwt(email string, id string, ctx iris.Context) (*ResponseGenerate, error) {
 	accessClaims := Claims{
 		Claims: jwt.Claims{Subject: email},
 		ID:     id,
@@ -35,7 +41,7 @@ func GenerateTokenJwt(email string, id string, ctx iris.Context) (map[string]int
 	accsesToken, err := AccessSigner.Sign(accessClaims)
 	if err != nil {
 		fmt.Println(err)
-		return make(map[string]interface{}), err
+		return &ResponseGenerate{}, err
 	}
 
 	refreshClaims := Claims{
@@ -45,13 +51,14 @@ func GenerateTokenJwt(email string, id string, ctx iris.Context) (map[string]int
 	}
 	refrshToken, err := RefreshSigner.Sign(refreshClaims)
 	if err != nil {
-		return make(map[string]interface{}), err
+		return &ResponseGenerate{}, err
 	}
 
-	return map[string]interface{}{
-		"acces_token":   string(accsesToken),
-		"refresh_token": string(refrshToken),
-		"expires_at":    int64(accessExpire.Seconds()),
+	return &ResponseGenerate{
+		AccessToken:      string(accsesToken),
+		ExpiresAt:        int64(accessExpire.Seconds()),
+		RefreshToken:     string(refrshToken),
+		RefreshExpiresAt: int64(refreshExpire.Seconds()),
 	}, nil
 
 }

@@ -19,10 +19,10 @@ func Register(ctx iris.Context) {
 	err := ctx.ReadJSON(&register)
 	if err != nil {
 		ctx.StatusCode(iris.StatusBadRequest)
-		ctx.JSON(iris.Map{
-			"status":  "error",
-			"message": "Invalid request body",
-			"error":   err.Error(),
+		ctx.JSON(&ErrorResponse{
+			Status:  "error",
+			Message: "Invalid request body",
+			Errors:  err.Error(),
 		})
 		return
 	}
@@ -31,10 +31,10 @@ func Register(ctx iris.Context) {
 	if err != nil {
 		if _, ok := err.(*validator.InvalidValidationError); ok {
 			ctx.StatusCode(iris.StatusInternalServerError)
-			ctx.JSON(iris.Map{
-				"status":  "error",
-				"message": "Invalid validation error",
-				"error":   err.Error(),
+			ctx.JSON(&ErrorResponse{
+				Status:  "error",
+				Message: "Invalid validation error",
+				Errors:  err.Error(),
 			})
 			return
 		}
@@ -48,10 +48,10 @@ func Register(ctx iris.Context) {
 		}
 
 		ctx.StatusCode(422)
-		ctx.JSON(iris.Map{
-			"status":  "error",
-			"message": "Validation failed",
-			"errors":  errors,
+		ctx.JSON(&ErrorResponse{
+			Status:  "error",
+			Message: "Validation failed",
+			Errors:  errors,
 		})
 		return
 	}
@@ -59,10 +59,10 @@ func Register(ctx iris.Context) {
 
 	if user_check == nil {
 		ctx.StatusCode(iris.StatusConflict)
-		ctx.JSON(iris.Map{
-			"status":  "error",
-			"message": "Validate failed",
-			"errors":  map[string]interface{}{"email": "Email already exists"},
+		ctx.JSON(&ErrorResponse{
+			Status:  "error",
+			Message: "Validate failed",
+			Errors:  map[string]interface{}{"email": "Email already exists"},
 		})
 		return
 	}
@@ -70,10 +70,10 @@ func Register(ctx iris.Context) {
 	email_check := db.Where("email = ? ", register.Email).First(&user).Error
 	if email_check == nil {
 		ctx.StatusCode(iris.StatusConflict)
-		ctx.JSON(iris.Map{
-			"status":  "error",
-			"message": "Validate failed",
-			"errors":  map[string]interface{}{"email": "Email already exists"},
+		ctx.JSON(&ErrorResponse{
+			Status:  "error",
+			Message: "Validate failed",
+			Errors:  map[string]interface{}{"email": "Email already exists"},
 		})
 		return
 	}
@@ -84,10 +84,10 @@ func Register(ctx iris.Context) {
 		panic(fmt.Sprintf("Errors, %v", errs))
 	}
 	ctx.StatusCode(iris.StatusCreated)
-	ctx.JSON(iris.Map{
-		"status":  "success",
-		"data":    user_create,
-		"message": "User registered successfully",
+	ctx.JSON(&Response{
+		Status:  "success",
+		Data:    user_create,
+		Message: "User registered successfully",
 	})
 }
 

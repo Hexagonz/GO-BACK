@@ -3,8 +3,8 @@ package controllers
 import (
 	"fmt"
 	"strconv"
+	"time"
 
-	"github.com/Hexagonz/back-end-go/database"
 	"github.com/Hexagonz/back-end-go/middleware/jwttoken"
 	"github.com/Hexagonz/back-end-go/models"
 	"github.com/go-playground/validator/v10"
@@ -18,7 +18,6 @@ func init() {
 }
 
 func Login(ctx iris.Context) {
-	db, errs = database.SetupDatabase()
 	if errs != nil {
 		ctx.StatusCode(iris.StatusInternalServerError)
 		ctx.JSON(iris.Map{
@@ -32,10 +31,10 @@ func Login(ctx iris.Context) {
 	err := ctx.ReadJSON(&user)
 	if err != nil {
 		ctx.StatusCode(iris.StatusBadRequest)
-		ctx.JSON(iris.Map{
-			"status":  "error",
-			"message": "Invalid request body",
-			"error":   err.Error(),
+		ctx.JSON(&ErrorResponse{
+			Status:  "error",
+			Message: "Invalid request body",
+			Errors:  err.Error(),
 		})
 		return
 	}
@@ -58,10 +57,10 @@ func Login(ctx iris.Context) {
 		}
 
 		ctx.StatusCode(422)
-		ctx.JSON(iris.Map{
-			"status":  "error",
-			"message": "Validation failed",
-			"errors":  errors,
+		ctx.JSON(&ErrorResponse{
+			Status:  "error",
+			Message: "Validation failed",
+			Errors:  errors,
 		})
 		return
 	}
@@ -70,49 +69,56 @@ func Login(ctx iris.Context) {
 	user_check := db.Where("email = ?", user.Email).First(&existingUser)
 	if user_check.Error != nil {
 		ctx.StatusCode(iris.StatusInternalServerError)
-		ctx.JSON(iris.Map{
-			"status":  "error",
-			"message": "Database error occurred",
-			"error":   user_check.Error.Error(),
+		ctx.JSON(&ErrorResponse{
+			Status:  "error",
+			Message: "Database error occurred",
+			Errors:  user_check.Error.Error(),
 		})
 		return
 	}
 
 	if user_check.RowsAffected == 0 {
 		ctx.StatusCode(iris.StatusNotFound)
-		ctx.JSON(iris.Map{
-			"status":  "error",
-			"message": "User not found",
-			"error":   "Email or Password is incorrect",
+		ctx.JSON(&ErrorResponse{
+			Status:  "error",
+			Message: "User not found",
+			Errors:  "Email or Password is incorrect",
 		})
 		return
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(existingUser.Password), []byte(user.Password))
 	if err != nil {
 		ctx.StatusCode(iris.StatusUnauthorized)
-		ctx.JSON(iris.Map{
-			"status":  "error",
-			"message": "Invalid password",
-			"error":   "Email or Password is incorrect",
+		ctx.JSON(&ErrorResponse{
+			Status:  "error",
+			Message: "Invalid password",
+			Errors:  "Email or Password is incorrect",
 		})
 		return
 	}
 	str := strconv.FormatUint(uint64(existingUser.ID), 10)
-	accses_token, err := jwttoken.GenerateTokenJwt(user.Email,str,ctx)
+	accses_token, err := jwttoken.GenerateTokenJwt(user.Email, str, ctx)
 	if err != nil {
 		ctx.StatusCode(iris.StatusInternalServerError)
-		ctx.JSON(iris.Map{
-			"status":  "error",
-			"message": "Failed to generate token",
-			"errors":   err.Error(),
+		ctx.JSON(&ErrorResponse{
+			Status:  "error",
+			Message: "Failed to generate token",
+			Errors:  err.Error(),
 		})
 		return
 	}
+
+	sessionUser := models.RefreshToken{
+		Refresh_Token: accses_token.AccessToken,
+		UserAgent:     ctx.GetHeader("User-Agent"),
+		ExpiredAt:     time.Now().Add(time.Duration(accses_token.RefreshExpiresAt)),
+	}
+	db.Create(&sessionUser)
 	ctx.StatusCode(iris.StatusOK)
-	ctx.JSON(iris.Map{
-		"status":  "success",
-		"data": accses_token,
-		"message": "User login successfully",
+	ctx.JSON(&Response{
+		Status:  "success",
+		Data:    accses_token,
+		Message: "User login successfully",
 	})
 }
 

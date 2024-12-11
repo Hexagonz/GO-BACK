@@ -28,7 +28,9 @@ func SetupDatabase() (*gorm.DB, error) {
 			env.DotEnvVariable("DB_NAME") == "", "mysql", env.DotEnvVariable("DB_NAME"),
 		),
 	)
-	db, err := gorm.Open(mysql.Open(db_conn), &gorm.Config{})
+	db, err := gorm.Open(mysql.Open(db_conn), &gorm.Config{
+		DisableForeignKeyConstraintWhenMigrating: true,
+	})
 
 	if err != nil {
 		return nil, err
@@ -36,11 +38,11 @@ func SetupDatabase() (*gorm.DB, error) {
 
 	modelsToMigrate := []interface{}{
 		&models.Users{},
+		&models.RefreshToken{},
 	}
 
 	for _, model := range modelsToMigrate {
-		err := db.AutoMigrate(model)
-		if err != nil {
+		if err := db.AutoMigrate(model); err != nil {
 			return nil, err
 		}
 	}
@@ -48,4 +50,3 @@ func SetupDatabase() (*gorm.DB, error) {
 	println("Database migration completed successfully!")
 	return db, nil
 }
-
