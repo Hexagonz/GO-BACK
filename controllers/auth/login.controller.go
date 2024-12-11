@@ -20,10 +20,10 @@ func init() {
 func Login(ctx iris.Context) {
 	if errs != nil {
 		ctx.StatusCode(iris.StatusInternalServerError)
-		ctx.JSON(iris.Map{
-			"status":  "error",
-			"message": "Database connection error",
-			"error":   errs.Error(),
+		ctx.JSON(&ErrorResponse{
+			Status:  "error",
+			Message: "Database connection error",
+			Errors:  errs.Error(),
 		})
 		return
 	}
@@ -43,10 +43,10 @@ func Login(ctx iris.Context) {
 	if err != nil {
 		if _, ok := err.(*validator.InvalidValidationError); ok {
 			ctx.StatusCode(iris.StatusInternalServerError)
-			ctx.JSON(iris.Map{
-				"status":  "error",
-				"message": "Invalid validation error",
-				"error":   err.Error(),
+			ctx.JSON(&ErrorResponse{
+				Status:  "error",
+				Message: "Invalid validation error",
+				Errors:  err.Error(),
 			})
 			return
 		}
