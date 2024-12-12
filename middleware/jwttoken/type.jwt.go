@@ -28,6 +28,14 @@ type ResponseReset struct {
 	ExpiredAt int64 `json:"expired_at"`
 }
 
+
+type ResponseGenerate struct {
+	AccessToken      string `json:"access_token"`
+	ExpiresAt        int64  `json:"expires_at"`
+	RefreshToken     string `json:"refresh_token"`
+	RefreshExpiresAt int64  `json:"refresh_expires_at"`
+}
+
 func (u *Claims) Validate() error {
 	if u.ID == "" {
 		return fmt.Errorf("username field is missing")

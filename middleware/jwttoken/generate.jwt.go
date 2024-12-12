@@ -19,13 +19,6 @@ var (
 	secretKey, err = utils.GenerateSecretKey()
 )
 
-type ResponseGenerate struct {
-	AccessToken      string `json:"access_token"`
-	ExpiresAt        int64  `json:"expires_at"`
-	RefreshToken     string `json:"refresh_token"`
-	RefreshExpiresAt int64  `json:"refresh_expires_at"`
-}
-
 func init() {
 	if err != nil {
 		log.Fatal("Failed to generate secret key: " + err.Error())

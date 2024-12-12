@@ -45,7 +45,7 @@ func Login(ctx iris.Context) {
 			ctx.StatusCode(iris.StatusInternalServerError)
 			ctx.JSON(&ErrorResponse{
 				Status:  "error",
-				Message: "Invalid validation error",
+				Message: "Internal server error",
 				Errors:  err.Error(),
 			})
 			return
@@ -107,11 +107,13 @@ func Login(ctx iris.Context) {
 		})
 		return
 	}
+	times := time.Duration(accses_token.RefreshExpiresAt)
 
+	date := time.Now().Add(time.Second * times)
 	sessionUser := models.RefreshToken{
 		Refresh_Token: accses_token.AccessToken,
 		UserAgent:     ctx.GetHeader("User-Agent"),
-		ExpiredAt:     time.Now().Add(time.Duration(accses_token.RefreshExpiresAt)),
+		ExpiredAt:     date,
 	}
 	db.Create(&sessionUser)
 	ctx.StatusCode(iris.StatusOK)

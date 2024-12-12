@@ -2,8 +2,6 @@ package utils
 
 import (
 	"crypto/rand"
-	"fmt"
-
 	"github.com/kataras/iris/v12"
 )
 
@@ -18,13 +16,6 @@ func IfElse(condition bool, trueValue, falseValue string) string {
 	}
 	return falseValue
 }
-
-func Catch(err error) {
-	if err != nil {
-		panic(fmt.Sprintf("Error: %v", err)) 
-	}
-}
-
 
 func GenerateSecretKey() ([]byte, error) {
 	secret := make([]byte, 16)
